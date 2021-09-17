@@ -25,8 +25,8 @@ mutable struct Params
  
     function Params(MC::MarkovChain; β = 0.9, r = 0.02, q̅ = 1 / 1.02, γ = 0, N = 100)
 	ygrid = exp.(MC.state_values)
-	amin = -ygrid[1]/r
-	amax = ygrid[end]/r
+	amin = -ygrid[end] #amin = -ygrid[1]/r
+	amax = ygrid[end]  #amax = ygrid[end]/r
 	a = range(amin, stop = amax, length = N)
 
 	return new(β, r, q̅, γ, a, ygrid, N, MC)
@@ -52,7 +52,8 @@ mutable struct ValueAndPolicy
 		value_default = Array{Float64,2}(undef, (1, states))
 		for i in 1:N
 			for j in 1:states
-				c = max(y[j] + a[i], 1 )
+				c = max(y[j]+r*a[i],1e-2)
+				# c = max(y[j] + a[i], 1 )
 				value_market[i, j] = (1 / (1 - β) * u(c)) # Initial guess
 				V[i, j] = (1 / (1 - β) * u(c)) # Initial guess
 				c̃ = y[j]
@@ -77,6 +78,7 @@ function OneStepUpdate!(VP, EV, Evalue_market, Evalue_default)
 
 		for i in 1:N
 			for k in 1:N
+				# From Ziqiao: I think the problem is here! 'saving_pol' is an index, rather than a saving amount!!
 				consumption = max(y[j] + VP.savings_pol[i, j] - VP.q[k, j] * VP.savings_pol[k], 1e-5) # for each choice of savings, consumption is residual; can't be negative
 				objective[k] = u(consumption) + β * Evalue_market[k, j]
 			end
@@ -133,7 +135,7 @@ end
 
 
 # PARAMS
-# AR1 process
+# AR1 process　
 ρ = 0.9
 σ = 0.1
 states = 3
